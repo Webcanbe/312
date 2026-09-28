@@ -1,0 +1,18 @@
+{
+  "v": 1,
+  "alg": "AES-256-GCM",
+  "aad": "Webcanbe-2027-time-capsule-v1",
+  "nonce": "HiPjsDhozmUXWJ11",
+  "sha256_plaintext": "543748c617855b1b383d97558a8917bf982dbac745291524b036a108b858d555",
+  "unlock_at": "2027-01-01T00:00:00+09:00",
+  "parts": [
+    "capsule/part-00.txt",
+    "capsule/part-01.txt",
+    "capsule/part-02.txt",
+    "capsule/part-03.txt",
+    "capsule/part-04.txt",
+    "capsule/part-05.txt",
+    "capsule/part-06.txt",
+    "capsule/part-07.txt"
+  ]
+}
