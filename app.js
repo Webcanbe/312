@@ -1,5 +1,5 @@
 const TARGET = new Date("2027-01-01T00:00:00+09:00").getTime();
-const CAPSULE_URL = "/capsule.json";
+const META_URL = "/capsule/meta.json";
 const KEY_URL = "https://raw.githubusercontent.com/Webcanbe/312/main/unlock-key.json";
 
 const countdownEl = document.querySelector("#countdown");
@@ -23,6 +23,18 @@ function fmt(ms) {
   return `${d}d ${String(h).padStart(2,"0")}h ${String(m).padStart(2,"0")}m ${String(s).padStart(2,"0")}s`;
 }
 
+async function loadCapsule() {
+  const metaRes = await fetch(`${META_URL}?v=1`, {cache:"no-store"});
+  if (!metaRes.ok) throw new Error("metadata unavailable");
+  const meta = await metaRes.json();
+  const parts = await Promise.all(meta.parts.map(async (path) => {
+    const r = await fetch(`/${path}?v=1`, {cache:"no-store"});
+    if (!r.ok) throw new Error("ciphertext part unavailable");
+    return (await r.text()).trim();
+  }));
+  return {...meta, ciphertext: parts.join("")};
+}
+
 async function decrypt(capsule, keyText) {
   const rawKey = b64urlToBytes(keyText.trim());
   const key = await crypto.subtle.importKey("raw", rawKey, "AES-GCM", false, ["decrypt"]);
@@ -38,16 +50,14 @@ async function tryUnlock() {
   if (Date.now() < TARGET) return;
   statusEl.textContent = "해제 키 공개 여부를 확인하는 중…";
   try {
-    const [capsuleRes, keyRes] = await Promise.all([
-      fetch(`${CAPSULE_URL}?v=1`, {cache:"no-store"}),
+    const [capsule, keyRes] = await Promise.all([
+      loadCapsule(),
       fetch(`${KEY_URL}?t=${Date.now()}`, {cache:"no-store"})
     ]);
-    if (!capsuleRes.ok) throw new Error("capsule unavailable");
     if (!keyRes.ok) {
       statusEl.textContent = "해제 시각은 지났지만 키 게시를 기다리고 있습니다. 자동으로 다시 확인합니다.";
       return;
     }
-    const capsule = await capsuleRes.json();
     const keyObj = await keyRes.json();
     const text = await decrypt(capsule, keyObj.key);
     statusEl.textContent = "해제 완료.";
@@ -63,8 +73,9 @@ setInterval(() => {
   countdownEl.textContent = fmt(TARGET - Date.now());
   if (Date.now() >= TARGET && messageEl.style.display !== "block") tryUnlock();
 }, 1000);
+
 countdownEl.textContent = fmt(TARGET - Date.now());
-fetch(CAPSULE_URL, {cache:"no-store"}).then(r => {
+fetch(META_URL, {cache:"no-store"}).then(r => {
   if (!r.ok) throw new Error();
   statusEl.textContent = Date.now() < TARGET
     ? "암호문은 준비되어 있습니다. 해제 키는 아직 공개되지 않았습니다."
